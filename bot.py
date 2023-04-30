@@ -1,12 +1,12 @@
 import discord
-import asyncio
 from discord.ext import commands
-from keep_alive import keep_alive
+import datetime
 import os
 
+
 TOKEN = ''
-allowed_channels = [1060182420059586580, 1086982623194255431, 1060183489510645911]
-exempt_roles = ['1060169362088136744', '1086956623190311012', '1085622436021674096']
+allowed_channels = [1060182420059586580, 1086982623194255431, 1060183489510645911] #Change Channel ID
+exempt_roles = ['1060169362088136744', '1086956623190311012', '1085622436021674096'] #Change role ID
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
@@ -89,83 +89,6 @@ async def cat(ctx):
     else:
         await ctx.send("Sorry, something went wrong while fetching the cat image. :(")
 
-log_channel_id = 1060183489510645911
-
-allowed_roles = [1060169362088136744, 1086956623190311012]
-
-@bot.event
-async def on_message(message):
-    if message.channel.id == 1060183489510645911:
-        log_channel = bot.get_channel(1060183489510645911)
-        await log_channel.send(f"{message.author.name}#{message.author.discriminator} said: {message.content}")
-    
-    await bot.process_commands(message)
-
-@bot.event
-async def on_guild_role_delete(role):
-    """Monitor for mass role deletions within a guild."""
-    guild = role.guild
-    log_channel = discord.utils.get(guild.text_channels, name='1060183489510645911')
-
-    if len(guild.roles) < len(bot.cached_roles):
-        await log_channel.send(f'Role {role.name} was deleted from {guild.name} without authorization.')
-        await guild.create_role(name=role.name, permissions=discord.Permissions.none(), reason='Unauthorized role deletion')
-
-@bot.event
-async def on_member_join(member):
-    """Automatically ban members who join with a certain name or profile picture."""
-    guild = member.guild
-    log_channel = discord.utils.get(guild.text_channels, name='1060183489510645911')
-
-    if member.name.startswith('UnauthorizedName'):
-        await member.ban(reason='Unauthorized member name')
-        await log_channel.send(f'{member.display_name} was banned from {guild.name} for having an unauthorized name.')
-
-    if member.avatar_url.startswith('https://example.com/unauthorized-avatar.png'):
-        await member.ban(reason='Unauthorized profile picture')
-        await log_channel.send(f'{member.display_name} was banned from {guild.name} for having an unauthorized profile picture.')
-
-@bot.event
-async def on_member_remove(member):
-    """Monitor for mass member deletions within a guild."""
-    guild = member.guild
-    log_channel = discord.utils.get(guild.text_channels, name='1060183489510645911')
-    
-    if member.guild.me.guild_permissions.view_audit_log:
-        async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
-            if entry.target == member:
-                return
-
-        async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
-            if entry.target == member:
-                return
-
-    if len(guild.members) < len(bot.cached_members):
-        await log_channel.send(f'{member.display_name} was removed from {guild.name} without authorization.')
-        await guild.ban(member, reason='Unauthorized member deletion')
-
-@bot.event
-@commands.has_role("1060945772293673041")
-async def create_antinuke_channel(ctx):
-    guild = ctx.guild
-    existing_channel = discord.utils.get(guild.channels, name="private")
-    if not existing_channel:
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            guild.me: discord.PermissionOverwrite(read_messages=True)
-        }
-        channel = await guild.create_text_channel(name="antinuke-log", overwrites=overwrites)
-        await channel.send("Anti-nuke logs will be displayed here.")
-        await ctx.send("Anti-nuke channel created.")
-    else:
-        await ctx.send("The anti-nuke channel already exists.")
-async def on_guild_channel_create(channel):
-    """Delete any newly created channels within a guild."""
-    guild = channel.guild
-    log_channel = discord.utils.get(guild.text_channels, name='#1060183489510645911')
-
-    await channel.delete()
-    await log_channel.send(f'Channel {channel.name} was deleted because it was created without authorization.')
 
 @bot.command()
 @commands.has_permissions(kick_members=True)
@@ -225,33 +148,43 @@ async def unmute(ctx, user: discord.Member, *, reason=None):
 async def warn(ctx, user: discord.Member, *, reason=None):
     await ctx.send(f'Issued a warning to {user.mention}. Reason: {reason}')
 
-@bot.event
-async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
 
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
+@bot.command()
+async def link(ctx, *, ingame_name):
+    user = ctx.author
+    now = datetime.datetime.utcnow()
+    player_stats_url = f'https://stats.pika-network.net/player/{ingame_name}'
+    embed = discord.Embed(title='Account Information', color=0x00ff00)
+    embed.add_field(name='Username', value=user.mention, inline=False)
+    embed.add_field(name='Ingame Name', value=f'[Link]({player_stats_url})', inline=False)
+    embed.add_field(name='Date Linked', value=now.strftime('%Y-%m-%d %H:%M:%S'), inline=False)
+    private_channel = bot.get_channel(1097601360217772052, 1102128412954464307) #change channel ID
+    await private_channel.send(embed=embed)
+    role = discord.utils.get(ctx.guild.roles, name='Linked user')
+    await ctx.author.add_roles(role)
+    await ctx.send(f'{user.mention} thanks for linking, you will receive your role within 24 hours!')
 
-    if message.channel.id in allowed_channels:
-        if '@625372456282095654' in message.content or '@673129333623357463' in message.content:
-            exempt = False
-            for role in message.author.roles:
-                if role.name in exempt_roles:
-                    exempt = True
-                    break
-            if not exempt:
-                await message.channel.send(f"{message.author.mention}, Kindly Do not Ping Poof~  or Markyss for irrelivant reasons and please read Rule 8")
-                role = discord.utils.get(message.guild.roles, name='Muted')
-                await message.author.add_roles(1089197830293442560)
-                await message.author.send("You've been muted for 1 day for mentioning @Poof~ or @Feeqz")
-                await message.delete()
-                await asyncio.sleep(86400)
-                await message.author.remove_roles(role)
-                return
-
-    print(f"{message.author}: {message.content} in {message.channel}")
-    await bot.process_commands(message)
+@bot.command()
+async def info(ctx):
+    user = ctx.author
+    member = ctx.guild.get_member(user.id)
+    linked_role = discord.utils.get(ctx.guild.roles, id=1097608912229908580) #change role ID
+    if linked_role in member.roles:
+        # user is linked
+        # get linked info and send in the same channel as command was invoked
+        # you can reuse the same code from link command
+        ingame_name = "Some ingame name" # replace with actual ingame name
+        now = datetime.datetime.utcnow()
+        embed = discord.Embed(title='Account Information', color=0x00ff00)
+        embed.add_field(name='Username', value=user.mention, inline=False)
+        embed.add_field(name='Account Link', value=f"Account Is Linked", inline=False)
+        embed.add_field(name='Date Linked', value=now.strftime('%Y-%m-%d %H:%M:%S'), inline=False)
+        await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed(title='Account Information', color=0x00ff00)
+        embed.add_field(name='Username', value=user.mention, inline=False)
+        embed.add_field(name='Account Linked', value=f"Account Is Not Linked", inline=False)
+        embed.add_field(name='Date Linked', value=now.strftime('%Y-%m-%d %H:%M:%S'), inline=False)
+      
 
 bot.run(TOKEN)
