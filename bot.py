@@ -4,7 +4,7 @@ from discord.ext import commands
 from keep_alive import keep_alive
 import os
 
-TOKEN = 'MTA4OTExODA3NTExNjMzMTEyOQ.Gknw6L.-JPUjyvwDYZ0sa1u6BJLAB8xAl-Hf1ihHo_GDs'
+TOKEN = ''
 allowed_channels = [1060182420059586580, 1086982623194255431, 1060183489510645911]
 exempt_roles = ['1060169362088136744', '1086956623190311012', '1085622436021674096']
 
