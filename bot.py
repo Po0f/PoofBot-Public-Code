@@ -4,7 +4,7 @@ import datetime
 import os
 
 
-TOKEN = ''
+TOKEN = ''#Add Token
 allowed_channels = [1060182420059586580, 1086982623194255431, 1060183489510645911] #Change Channel ID
 exempt_roles = ['1060169362088136744', '1086956623190311012', '1085622436021674096'] #Change role ID
 
